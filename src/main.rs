@@ -1,6 +1,6 @@
 use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
 use serde::{Deserialize, Serialize};
-use serde_json;
+use serde_json::{self, Value};
 
 #[derive(Serialize, Deserialize)]
 struct LogBatch {
@@ -10,8 +10,16 @@ struct LogBatch {
 }
 
 #[post("/api/logs")]
-async fn logs_receive(req_body: String) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
+async fn logs_receive(body: web::Bytes) -> impl Responder {
+    let data: Value = match serde_json::from_slice(&body) {
+        Ok(val) => val,
+        Err(e) => {
+            eprintln!("Parsing to JSON error: {:?}", e);
+            return HttpResponse::BadRequest().body("Invalid JSON - quitting...");
+        }
+    };
+
+    HttpResponse::Ok().json(data)
 }
 
 #[actix_web::main]
